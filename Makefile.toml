@@ -1,0 +1,307 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+ANDROID_PLATFORM_VERSION = "28"
+ANDROID_NDK_HOME = "/home/h/Android/Sdk/ndk-bundle/"
+LIB_OUT_DIR = "debug"
+DEV = true
+RELEASE = false
+
+[env.release]
+RELEASE = true
+DEV = false
+LIB_OUT_DIR = "release"
+
+[config]
+init_task = "init"
+end_task = "end"
+
+[tasks.init]
+script = """
+  echo  "\t(  _)( \\/ )( \\/ )(  )(  )"
+  echo  "\t ) _) )  (  \\  /__)(  )( "
+  echo  "\t(___)(_/\\_)(__/(___/ (__)"
+"""
+
+[tasks.end]
+
+[tasks.default]
+alias = "compile"
+
+[tasks.run]
+script_runner = "@duckscript"
+script = """
+cm_run_task compile
+cm_run_task flutter-run
+"""
+
+[tasks.bb]
+script_runner = "@duckscript"
+env = { RELEASE = true, DEV = false, LIB_OUT_DIR = "release" }
+script = """
+cm_run_task compile
+cm_run_task flutter-build
+"""
+
+[tasks.flutter-run]
+private = true
+script = "cd app && flutter pub get && flutter run -d ${@} && cd .."
+
+[tasks.flutter-pub-get]
+private = true
+script = """
+flutter pub get
+cd app && flutter pub get
+cd ..
+"""
+
+[tasks.flutter-build]
+private = true
+script_runner = "@duckscript"
+script = """
+  cm_run_task flutter-pub-get
+  cd app
+  if ${ALL}
+    echo "ALL BUILD"
+    set_env FLUTTER_BUILD_TYPE apk
+    cm_run_task flutter-build-wrapper
+    set_env FLUTTER_BUILD_TYPE linux
+    cm_run_task flutter-build-wrapper
+    cm_run_task flutter-linux-post
+  else
+    fn get_build_type
+      args = split ${CARGO_MAKE_TASK_ARGS} ";"
+      build_type = array_get ${args} 0
+      if ${build_type}
+        return ${build_type}
+      else
+        return "all"
+      end
+    end
+    build_type = get_build_type
+    set_env FLUTTER_BUILD_TYPE ${build_type}
+    cm_run_task flutter-build-wrapper
+    if eq ${build_type} "linux"
+      cm_run_task flutter-linux-post
+    end
+  end
+"""
+
+[tasks.flutter-build-wrapper]
+private = true
+command = "flutter"
+args = [
+  "build",
+  "${FLUTTER_BUILD_TYPE}"
+]
+
+[tasks.all]
+private = true
+condition = { env_true = ["ALL"] }
+script_runner = "@duckscript"
+script = """
+cm_run_task linux
+cm_run_task android-all
+"""
+
+[tasks.compile]
+private = true
+script_runner = "@duckscript"
+script = """ 
+  fn get_build_type
+    args = split ${CARGO_MAKE_TASK_ARGS} ";"
+    build_type = array_get ${args} 0
+    if ${build_type}
+      return ${build_type}
+    else
+      return "all"
+    end
+  end
+  build_type = get_build_type
+  echo ${build_type}
+  if eq ${build_type} "linux"
+    cm_run_task linux
+  elseif eq ${build_type} "apk"
+    if eq ${DEV} true
+      echo Build android in only dev mode
+      cm_run_task android-dev
+    else
+      echo Build android in prod mode
+      cm_run_task android-all
+    end
+  else
+    set_env ALL true
+    cm_run_task all
+  end
+  if is_windows
+    echo [WARNING] Oh shit you windows user EVERYTHING MAY GO WRONG!
+  end
+"""
+
+[tasks.android-all]
+private = true
+description = "Build android targets."
+category = "Build"
+script_runner = "@duckscript"
+script = """
+cm_run_task pre-android
+cm_run_task android-aarch64
+cm_run_task android-armv7
+cm_run_task android-x86
+cm_run_task android-x86_64
+"""
+
+[tasks.android-dev]
+private = true
+description = "Build one android target."
+category = "Build"
+script_runner = "@duckscript"
+script = """
+cm_run_task pre-android
+cm_run_task android-aarch64
+"""
+
+[tasks.linux]
+description = "Build for linux target"
+category = "Build"
+script_runner = "@duckscript"
+script = """
+cm_run_task linux-x86_64
+"""
+
+[tasks.pre-android]
+private = true
+script_runner = "@duckscript"
+script = [
+    "mkdir ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/android/app/src/main/jniLibs/arm64-v8a",
+    "mkdir ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/android/app/src/main/jniLibs/armeabi-v7a",
+    "mkdir ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/android/app/src/main/jniLibs/x86",
+    "mkdir ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/android/app/src/main/jniLibs/x86_64",
+]
+
+[tasks.link-android]
+private = true
+condition = { env_set = ["ANDROID_TARGET", "LIB_OUT_DIR", "RUST_TARGET"] }
+script = [
+  "rm -f ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/android/src/main/jniLibs/${ANDROID_TARGET}/lib${CARGO_MAKE_CRATE_FS_NAME}.so",
+  "ln -s ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/${RUST_TARGET}/${LIB_OUT_DIR}/lib${CARGO_MAKE_CRATE_FS_NAME}.so ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/android/src/main/jniLibs/${ANDROID_TARGET}/lib${CARGO_MAKE_CRATE_FS_NAME}.so",
+]
+
+[tasks.android-build]
+private = true
+condition = { env_set = ["ANDROID_TARGET", "ANDROID_PLATFORM_VERSION"] }
+script_runner = "@duckscript"
+script = """
+  if ${RELEASE}
+    cm_run_task android-build-wrapper-release
+  else
+    cm_run_task android-build-wrapper-debug
+  end
+"""
+
+[tasks.android-build-wrapper-debug]
+command = "cargo"
+args = [
+  "ndk", 
+  "--platform", 
+  "${ANDROID_PLATFORM_VERSION}", 
+  "--target", 
+  "${ANDROID_TARGET}", 
+  "build",
+]
+
+[tasks.android-build-wrapper-release]
+command = "cargo"
+args = [
+  "ndk", 
+  "--platform", 
+  "${ANDROID_PLATFORM_VERSION}", 
+  "--target", 
+  "${ANDROID_TARGET}", 
+  "build",
+  "--release"
+]
+
+
+[tasks.android-aarch64]
+private = true
+env = { RUST_TARGET = "aarch64-linux-android", ANDROID_TARGET = "arm64-v8a" }
+run_task = "android-build"
+dependencies = ["link-android"]
+
+
+[tasks.android-armv7]
+private = true
+env = { RUST_TARGET = "armv7-linux-androideabi", ANDROID_TARGET = "armeabi-v7a" }
+run_task = "android-build"
+dependencies = ["link-android"]
+
+
+[tasks.android-x86_64]
+private = true
+env = { RUST_TARGET = "x86_64-linux-android", ANDROID_TARGET = "x86_64" }
+run_task = "android-build"
+dependencies = ["link-android"]
+
+
+[tasks.android-x86]
+private = true
+env = { RUST_TARGET = "x86_64-linux-android", ANDROID_TARGET = "x86" }
+run_task = "android-build"
+dependencies = ["link-android"]
+
+
+[tasks.linux-build]
+private = true
+script_runner = "@duckscript"
+script = """
+  if ${RELEASE}
+    cm_run_task linux-build-release
+  else
+    cm_run_task linux-build-debug
+  end
+"""
+
+[tasks.linux-build-release]
+command = "cargo"
+args = [
+  "build",
+  "--target",
+  "${RUST_TARGET}",
+  "--release"
+]
+
+[tasks.linux-build-debug]
+command = "cargo"
+args = [
+  "build",
+  "--target",
+  "${RUST_TARGET}"
+]
+
+[tasks.flutter-linux-post]
+private = true
+script = """
+cp ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/x86_64-unknown-linux-gnu/${LIB_OUT_DIR}/lib${CARGO_MAKE_CRATE_FS_NAME}.so \
+${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/app/build/linux/x64/${LIB_OUT_DIR}/bundle/lib/
+"""
+
+[tasks.linux-x86_64]
+private = true
+env = {RUST_TARGET = "x86_64-unknown-linux-gnu"}
+run_task = "linux-build"
+
+
+[tasks.cc]
+script_runner = "@duckscript"
+script = """
+cm_run_task clean
+rm -f target/bindings.h target/bindings.src.h
+cm_run_task flutter-clean
+"""
+
+[tasks.flutter-clean]
+script = """
+flutter clean
+cd app && flutter clean
+cd ..
+"""
