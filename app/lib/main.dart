@@ -20,10 +20,10 @@ class _MyAppState extends State<MyApp> {
 
   void initPlatformState() {
     // sync call
-    String response = Greeter.greet("John Smith");
+    String response = Greeter.getTodo();
 
     setState(() {
-      _response = response;
+      _response = response.toString();
     });
   }
 

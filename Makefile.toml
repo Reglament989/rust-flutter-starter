@@ -1,7 +1,7 @@
 [env]
 CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
 ANDROID_PLATFORM_VERSION = "28"
-ANDROID_NDK_HOME = "/home/h/Android/Sdk/ndk-bundle/"
+ANDROID_NDK_HOME = "/home/h/Android/Sdk/ndk/22.1.7171670/"
 LIB_OUT_DIR = "debug"
 DEV = true
 RELEASE = false
@@ -44,7 +44,7 @@ cm_run_task flutter-build
 
 [tasks.flutter-run]
 private = true
-script = "cd app && flutter pub get && flutter run -d ${@} && cd .."
+script = "cd app && flutter pub get && flutter run && cd .."
 
 [tasks.flutter-pub-get]
 private = true
@@ -55,8 +55,8 @@ cd ..
 """
 
 [tasks.flutter-build]
-private = true
 script_runner = "@duckscript"
+env = { RELEASE = true, DEV = false, LIB_OUT_DIR = "release" }
 script = """
   cm_run_task flutter-pub-get
   cd app
@@ -104,7 +104,6 @@ cm_run_task android-all
 """
 
 [tasks.compile]
-private = true
 script_runner = "@duckscript"
 script = """ 
   fn get_build_type
@@ -197,6 +196,7 @@ script = """
     cm_run_task android-build-wrapper-debug
   end
 """
+dependencies = ["link-android"]
 
 [tasks.android-build-wrapper-debug]
 command = "cargo"
@@ -226,28 +226,25 @@ args = [
 private = true
 env = { RUST_TARGET = "aarch64-linux-android", ANDROID_TARGET = "arm64-v8a" }
 run_task = "android-build"
-dependencies = ["link-android"]
+
 
 
 [tasks.android-armv7]
 private = true
 env = { RUST_TARGET = "armv7-linux-androideabi", ANDROID_TARGET = "armeabi-v7a" }
 run_task = "android-build"
-dependencies = ["link-android"]
 
 
 [tasks.android-x86_64]
 private = true
 env = { RUST_TARGET = "x86_64-linux-android", ANDROID_TARGET = "x86_64" }
 run_task = "android-build"
-dependencies = ["link-android"]
 
 
 [tasks.android-x86]
 private = true
 env = { RUST_TARGET = "x86_64-linux-android", ANDROID_TARGET = "x86" }
 run_task = "android-build"
-dependencies = ["link-android"]
 
 
 [tasks.linux-build]
