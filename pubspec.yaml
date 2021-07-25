@@ -61,9 +61,11 @@ flutter:
   # https://flutter.dev/custom-fonts/#from-packages
 
 ffigen:
+  # strings:
+  encoding: utf8
   output: lib/bindings.dart
   headers:
     entry-points:
       - target/bindings.h
-  name: GreeterBindings
+  name: RustBindings
   description: Dart bindings to call mylib functions

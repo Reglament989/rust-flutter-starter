@@ -1,5 +1,4 @@
-use serde::{Deserialize};
-
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct Todo {
@@ -7,21 +6,19 @@ pub struct Todo {
     pub user_id: i8,
     pub id: i8,
     pub title: String,
-    pub completed: bool
+    pub completed: bool,
 }
 
-impl PartialEq for Todo
-{
+impl PartialEq for Todo {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-const URL: &str = "https://jsonplaceholder.typicode.com/todos/1";
+static URL: &'static str = "https://jsonplaceholder.typicode.com/todos/1";
 
 pub fn get_one_todo() -> Result<Todo, Box<dyn std::error::Error>> {
-    let resp: Todo = reqwest::blocking::get(URL)?
-        .json()?;
+    let resp: Todo = reqwest::blocking::get(URL)?.json()?;
     println!("{:#?}", resp);
     Ok(resp)
 }
@@ -37,7 +34,7 @@ mod tests {
             user_id: 1,
             id: 1,
             title: String::from("delectus aut autem"),
-            completed: false
+            completed: false,
         };
         assert_eq!(ok.unwrap(), example_todo)
     }

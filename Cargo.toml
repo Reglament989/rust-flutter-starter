@@ -1,7 +1,7 @@
 [package]
 name = "example"
 version = "0.1.0"
-authors = ["Brick Pop <itsbrickpop@gmail.com>"]
+authors = ["Reglament989"]
 edition = "2018"
 
 [lib]
@@ -9,7 +9,10 @@ name = "example"
 path = "rust/src/lib.rs"
 crate-type = ["staticlib", "cdylib"]
 
-
 [dependencies]
 reqwest = { version = "0.11", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 serde = { version = "1.0", features = ["derive"] }
+rusqlite = { version = "0.25.3", features = ["bundled"] }
+lazy_static = "1.4.0"
+r2d2 = "0.8.9"
+r2d2_sqlite = "0.18.0"

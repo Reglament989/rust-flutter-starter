@@ -1,7 +1,8 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-mod http;
 
+mod db;
+mod http;
 #[no_mangle]
 pub extern "C" fn rust_greeting(to: *const c_char) -> *mut c_char {
     let c_str = unsafe { CStr::from_ptr(to) };
